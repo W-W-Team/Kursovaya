@@ -1,4 +1,11 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, send_file
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.fonts import addMapping
+from reportlab.lib import colors
 
 app = Flask(__name__)
 
@@ -82,7 +89,7 @@ HTML_INDEX = """
             <button type="submit">Рассчитать</button>
         </form>
         <p class="note"><span class="required">*</span> - обязательные поля</p>
-	<p class="note">Сделано студентами группы ПИ-330Б: Хайриддинов Б.Ф., Мухамедов Д.А., Кильмухаметов Р.У.</p>
+        <p class="note">Сделано студентами группы ПИ-330Б: Хайриддинов Б.Ф., Мухамедов Д.А., Кильмухаметов Р.У.</p>
     </div>
 </body>
 </html>
@@ -147,6 +154,57 @@ def calculate():
         tax = taxable_income * 0.13  # Налог 13%
         net_salary = taxable_income - tax  # Чистая зарплата
 
+        # Генерация PDF с таблицей
+        pdf_buffer = BytesIO()
+        
+        # Регистрация шрифта Arial
+        pdfmetrics.registerFont(TTFont('Arial', 'static/fonts/arial.ttf'))
+        addMapping('Arial', 0, 0, 'Arial')
+
+        c = canvas.Canvas(pdf_buffer, pagesize=A4)
+        c.setFont("Arial", 12)
+
+        c.setFont("Arial", 16)
+        c.drawString(100, 800, "Итоги расчета сдельной оплаты труда")
+
+        # Данные для таблицы
+        data = [
+            ["Параметр", "Значение"],
+            ["Общая зарплата", f"{gross_salary:.2f} руб"],
+            ["Бонусы", f"{bonus:.2f} руб"],
+            ["Удержания", f"{deduction:.2f} руб"],
+            ["Налоги (13%)", f"{tax:.2f} руб"],
+            ["Чистая зарплата", f"{net_salary:.2f} руб"]
+        ]
+        
+        # Позиции для таблицы
+        x = 100
+        y = 750
+        row_height = 20
+        col_width = 150
+
+        # Рисуем заголовки таблицы
+        c.setFont("Arial", 12)
+        for col_num, column in enumerate(data[0]):
+            c.setFillColor(colors.white)
+            c.rect(x + col_num * col_width, y, col_width, row_height, fill=1)
+            c.setFillColor(colors.black)
+            c.drawString(x + col_num * col_width + 5, y + 5, column)
+
+        # Рисуем строки таблицы
+        c.setFont("Arial", 12)
+        for row in data[1:]:
+            y -= row_height
+            for col_num, cell in enumerate(row):
+                c.setFillColor(colors.white)
+                c.rect(x + col_num * col_width, y, col_width, row_height, fill=1)
+                c.setFillColor(colors.black)
+                c.drawString(x + col_num * col_width + 5, y + 5, cell)
+
+        c.save()
+
+        pdf_buffer.seek(0)
+        return send_file(pdf_buffer, as_attachment=True, download_name="report.pdf")
     except (ValueError, TypeError):
         return render_template_string(HTML_ERROR)
 
