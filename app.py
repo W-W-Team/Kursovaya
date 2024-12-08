@@ -82,6 +82,7 @@ HTML_INDEX = """
             <button type="submit">Рассчитать</button>
         </form>
         <p class="note"><span class="required">*</span> - обязательные поля</p>
+        <p class="note">Сделано студентами группы ПИ-330Б: Хайриддинов Б.Ф., Мухамедов Д.А., Кильмухаметов Р.У.</p>
     </div>
 </body>
 </html>
