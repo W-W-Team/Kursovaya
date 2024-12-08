@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
@@ -82,7 +82,7 @@ HTML_INDEX = """
             <button type="submit">Рассчитать</button>
         </form>
         <p class="note"><span class="required">*</span> - обязательные поля</p>
-        <p class="note">Сделано студентами группы ПИ-330Б: Хайриддинов Б.Ф., Мухамедов Д.А., Кильмухаметов Р.У.</p>
+	<p class="note">Сделано студентами группы ПИ-330Б: Хайриддинов Б.Ф., Мухамедов Д.А., Кильмухаметов Р.У.</p>
     </div>
 </body>
 </html>
@@ -121,3 +121,34 @@ HTML_ERROR = """
 </body>
 </html>
 """
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_INDEX)
+
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    try:
+        # Получение данных из формы
+        units = float(request.form['units'])  # Количество изделий
+        rate = float(request.form['rate'])  # Оплата за единицу изделия
+        
+        # Удержания и бонусы, если не указаны - присваиваем 0
+        deduction = float(request.form.get('deduction', 0) or 0)  # Если поле пустое, будет 0
+        bonus = float(request.form.get('bonus', 0) or 0)  # Если поле пустое, будет 0
+
+        # Проверка на отрицательные значения
+        if units < 0 or rate < 0 or deduction < 0 or bonus < 0:
+            return render_template_string(HTML_ERROR)
+
+        # Основные расчеты
+        gross_salary = units * rate  # Общая зарплата
+        taxable_income = gross_salary + bonus - deduction  # Облагаемый доход
+        tax = taxable_income * 0.13  # Налог 13%
+        net_salary = taxable_income - tax  # Чистая зарплата
+
+    except (ValueError, TypeError):
+        return render_template_string(HTML_ERROR)
+
+if __name__ == '__main__':
+    app.run()
